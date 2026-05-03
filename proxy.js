@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { ADMIN_DASHBOARD } from "./routes/AdminPanelRoute";
 import { USER_DASHBOARD, WEBSITE_LOGIN } from "./routes/WebsiteRoute";
 
-export async function middleware(request) {
+export async function proxy(request) {
   const pathname = request.nextUrl.pathname;
 
   // ❌ SKIP: API routes, Next internal files

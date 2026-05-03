@@ -88,6 +88,23 @@ export async function DELETE(request) {
       );
     }
 
+    // Delete associated products first
+    // Note: We need to handle product dependencies too
+    const products = await prisma.product.findMany({
+      where: { categoryId: { in: ids } },
+      select: { id: true }
+    });
+    
+    const productIds = products.map(p => p.id);
+    
+    if (productIds.length > 0) {
+      // Cleanup product dependencies
+      await prisma.orderItem.deleteMany({ where: { productId: { in: productIds } } });
+      await prisma.review.deleteMany({ where: { productId: { in: productIds } } });
+      await prisma.productVariant.deleteMany({ where: { productId: { in: productIds } } });
+      await prisma.product.deleteMany({ where: { id: { in: productIds } } });
+    }
+
     await prisma.category.deleteMany({
       where: { id: { in: ids } }
     });

@@ -14,6 +14,9 @@ import loading from "@/public/assets/images/loading.svg";
 import ModalMediaBlock from "./ModalMediaBlock";
 import { showToast } from "@/lib/showtoast";
 import { ButtonLoading } from "../ButtonLoading";
+import UploadMedia from "./UploadMedia";
+import { useQueryClient } from "@tanstack/react-query";
+
 const MediaModal = ({
   open,
   setOpen,
@@ -21,6 +24,7 @@ const MediaModal = ({
   setSelectedMedia,
   isMultiple,
 }) => {
+  const queryClient = useQueryClient();
   const [previouslySelected, setPreviouslySelected] = useState([]);
 
   const fetchMedia = async (page) => {
@@ -71,12 +75,19 @@ const MediaModal = ({
         className="sm:max-w-[80%] h-screen p-0 py-10 bg-transparent border-0 shadow-none"
       >
         <DialogDescription className="hidden"></DialogDescription>
-        <div className="h-[90vh] bg-white dark:bg-card p-3 rounded shadow">
-          <DialogHeader className="h-8 borber-b  text-black dark:text-white">
-            <DialogTitle>Media Selection</DialogTitle>
+        <div className="h-[90vh] bg-white dark:bg-card p-3 rounded shadow flex flex-col">
+          <DialogHeader className="flex-shrink-0 border-b pb-3 mb-2 text-black dark:text-white">
+            <div className="flex justify-between items-center pr-6">
+              <DialogTitle className="text-xl font-bold">Media Selection</DialogTitle>
+              <UploadMedia 
+                isMultiple={isMultiple} 
+                queryClient={queryClient} 
+                invalidateKeys={["MediaModal"]} 
+              />
+            </div>
           </DialogHeader>
 
-          <div className="h-[calc(100%-80px)] overflow-auto py-2">
+          <div className="flex-grow overflow-auto py-2 custom-scrollbar">
             {isPending ? (
               <div className="size-full flex justify-center items-center">
                 <Image src={loading} alt="loading" height={80} width={80} />
@@ -87,7 +98,7 @@ const MediaModal = ({
               </div>
             ) : (
               <>
-                <div className="grid lg:grid-cols-6 grid-cols-3 gap-2">
+                <div className="grid lg:grid-cols-6 grid-cols-3 gap-3">
                   {data?.pages?.map((page, index) => (
                     <React.Fragment key={index}>
                       {page?.mediaData?.map((media) => (
@@ -104,7 +115,7 @@ const MediaModal = ({
                 </div>
 
                 {hasNextPage ? (
-                  <div className="flex justify-center py-5">
+                  <div className="flex justify-center py-8">
                     <ButtonLoading
                       type="button"
                       onClick={() => fetchNextPage()}
@@ -113,23 +124,23 @@ const MediaModal = ({
                     />
                   </div>
                 ) : (
-                  <p className="text-center py-5">Nothing more to Load</p>
+                  <p className="text-center py-10 text-gray-500 font-medium italic">Nothing more to Load</p>
                 )}
               </>
             )}
           </div>
 
-          <div className="h-10 pt-3 border-t flex justify-between">
+          <div className="flex-shrink-0 pt-3 border-t flex justify-between items-center mt-auto">
             <div>
-              <Button type="button" variant="destructive" onClick={handleClear}>
+              <Button type="button" variant="destructive" className="px-6" onClick={handleClear}>
                 Clear All
               </Button>
             </div>
-            <div className="flex gap-5 ">
-              <Button type="button" variant="secondary" onClick={handleClose}>
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" className="px-6" onClick={handleClose}>
                 Close
               </Button>
-              <Button type="button" onClick={handleSelect}>
+              <Button type="button" className="px-10 font-bold" onClick={handleSelect}>
                 Select
               </Button>
             </div>

@@ -25,14 +25,14 @@ export async function POST(request) {
             return response(false, 404, "User not found")
         }
         
-        await prisma.oTP.deleteMany({
+        await prisma.otp.deleteMany({
             where: { email }
         })
 
         const otp = generateOTP()
         const otpString = otp.toString();
         
-        await prisma.oTP.create({
+        await prisma.otp.create({
             data: {
                 email,
                 otp: otpString,

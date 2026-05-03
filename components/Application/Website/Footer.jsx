@@ -133,7 +133,7 @@ const Footer = () => {
                     </li>
                     <li className='flex items-center gap-3 mb-2 text-gray-500'>
                         <MdOutlineMailOutline size={20}  />
-                        <Link href="mailto:ridwanulbasit32@gmail.com" className="hover:text-primary">ridwanulbasit32@gmail.com</Link>
+                        <Link href="mailto:support@e-store.com" className="hover:text-primary">support@e-store.com</Link>
                     </li>
                 </ul>
 

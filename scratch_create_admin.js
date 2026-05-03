@@ -1,33 +1,45 @@
-import prisma from "./lib/prisma.js";
-import bcrypt from "bcrypt";
+require('dotenv').config();
+const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
+const pg = require('pg');
+const bcrypt = require('bcrypt');
+
+const prismaClientSingleton = () => {
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
+  return new PrismaClient({ adapter });
+};
+
+const prisma = prismaClientSingleton();
 
 async function createAdmin() {
-  const email = "admin@gmail.com";
-  const password = "Admin@123";
+  const email = "admin_new@example.com";
+  const plainPassword = "AdminPassword123!";
   const name = "Admin User";
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const admin = await prisma.user.create({
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      console.log(`User ${email} already exists.`);
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+    const user = await prisma.user.create({
       data: {
+        name,
         email,
         password: hashedPassword,
-        name,
         role: 'admin',
         isEmailVerified: true
       }
     });
 
-    console.log("Admin user created successfully:");
-    console.log(`Email: ${admin.email}`);
-    console.log(`Password: ${password}`);
+    console.log(`Successfully created admin account:`);
+    console.log(`Email: ${email}`);
+    console.log(`Password: ${plainPassword}`);
   } catch (error) {
-    if (error.code === 'P2002') {
-      console.log("Admin user already exists or email is taken.");
-    } else {
-      console.error("Error creating admin:", error);
-    }
+    console.error("Error creating admin:", error);
   } finally {
     await prisma.$disconnect();
   }

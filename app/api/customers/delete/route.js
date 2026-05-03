@@ -88,6 +88,19 @@ export async function DELETE(request) {
       );
     }
 
+    // Delete associated data first to satisfy foreign key constraints
+    
+    // 1. Delete reviews
+    await prisma.review.deleteMany({
+      where: { userId: { in: ids } }
+    });
+
+    // 2. Delete orders (OrderItems will cascade delete)
+    await prisma.order.deleteMany({
+      where: { userId: { in: ids } }
+    });
+
+    // 3. Delete users
     await prisma.user.deleteMany({
       where: { id: { in: ids } }
     });

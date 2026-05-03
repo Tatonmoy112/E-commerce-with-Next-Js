@@ -83,11 +83,7 @@ const LoginPage = () => {
       // ✅ Show success toast
       showToast("success", data.message)
       setOtpemail(values.email)
-      // ✅ Redirect to OTP verification page
-      if (data.email) {
-        window.location.href = `/auth/verify-otp?email=${data.email}`
-      }
-
+      // OTP component will now show inline
     } catch (error) {
       showToast("error", error.response?.data?.message || error.message || "Something went wrong")
     } finally {

@@ -19,7 +19,7 @@ const LogoutButton = () => {
       }
       dispatch(logout());
       showToast("success", data.message);
-      router.push(WEBSITE_LOGIN);
+      router.push("/");
     } catch (error) {
       showToast("error", error.message);
     }

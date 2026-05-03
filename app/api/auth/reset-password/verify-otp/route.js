@@ -16,7 +16,7 @@ export async function POST(request) {
     }
     
     const { email, otp } = validatedData.data
-    const otpData = await prisma.oTP.findFirst({
+    const otpData = await prisma.otp.findFirst({
       where: { email, otp }
     })
     
@@ -32,7 +32,7 @@ export async function POST(request) {
       return response(false, 404, "User not found")
     }
 
-    await prisma.oTP.delete({
+    await prisma.otp.delete({
       where: { id: otpData.id }
     })
 

@@ -29,14 +29,18 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (cart.cartItems.length === 0) {
       router.push('/cart');
-    } else if (!auth.auth) {
-      showToast('error', 'Please login to checkout');
-      router.push('/auth/login?redirect=/checkout');
+    } else if (!auth.auth || auth.auth.role !== 'user') {
+      if (auth.auth && auth.auth.role !== 'user') {
+        showToast('error', 'Only customers can place orders. Please login with a customer account.');
+      } else {
+        showToast('error', 'Please login to checkout');
+      }
+      router.push('/auth/login?callback=/checkout');
     }
   }, [cart.cartItems, auth.auth, router]);
 
-  // Show nothing while redirecting
-  if (cart.cartItems.length === 0 || !auth.auth) {
+  // Show nothing while redirecting or if wrong role
+  if (cart.cartItems.length === 0 || !auth.auth || auth.auth.role !== 'user') {
     return null;
   }
 

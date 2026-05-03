@@ -42,3 +42,6 @@ export const ADMIN_CUSTOMERS_SHOW = '/admin/customers'
 //review 
 
 export const ADMIN_REVIEW_SHOW = '/admin/review'
+
+// orders
+export const ADMIN_ORDERS_SHOW = '/admin/orders'
