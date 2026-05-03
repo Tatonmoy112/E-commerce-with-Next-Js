@@ -60,7 +60,7 @@ const FeaturedProduct = () => {
         {!loading &&
           productData.data.length > 0 &&
           productData.data.map((product) => (
-            <ProductBox key={product._id} product={product} />
+            <ProductBox key={product.id} product={product} />
           ))}
       </div>
     </section>

@@ -25,10 +25,10 @@ const Media = ({
   const handleCheck = () => {
     let newSelectedMedia = [];
 
-    if (selectedMedia.includes(media._id)) {
-      newSelectedMedia = selectedMedia.filter((id) => id !== media._id);
+    if (selectedMedia.includes(media.id)) {
+      newSelectedMedia = selectedMedia.filter((id) => id !== media.id);
     } else {
-      newSelectedMedia = [...selectedMedia, media._id];
+      newSelectedMedia = [...selectedMedia, media.id];
     }
 
     setSelectedMedia(newSelectedMedia);
@@ -43,7 +43,7 @@ const Media = ({
       <div className="border - border-gray-200 dark:border-gray-800 relative group rounded overflow-hidden">
         <div className="absolute top-2 left-2 z-20">
           <Checkbox
-            checked={selectedMedia.includes(media._id)}
+            checked={selectedMedia.includes(media.id)}
             onCheckedChange={handleCheck}
             className="border-primary cursor-pointer"
           />
@@ -59,7 +59,7 @@ const Media = ({
               {deleteType === "SD" && (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link href={ADMIN_MEDIA_EDIT(media._id)}>
+                    <Link href={ADMIN_MEDIA_EDIT(media.id)}>
                       <MdOutlineEdit />
                       Edit
                     </Link>
@@ -75,7 +75,7 @@ const Media = ({
 
               <DropdownMenuItem asChild>
                 <button
-                  onClick={() => handleDelete([media._id], deleteType)}
+                  onClick={() => handleDelete([media.id], deleteType)}
                   className="flex items-center gap-2"
                 >
                   <AiTwotoneDelete color="red" />

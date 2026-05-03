@@ -1,19 +1,12 @@
 import { cookies } from "next/headers"
-
-const { connectDB } = require("@/lib/db")
-const { catchError, response } = require("@/lib/helperFunction")
+import { catchError, response } from "@/lib/helperFunction"
 
 export async function POST(request) {
-
     try {
-        await connectDB()
-
         const cookieStore = await cookies()
         cookieStore.delete('access_token')  
-        return response(true,200 ,'Logout successful')   
+        return response(true, 200, 'Logout successful')   
     } catch (error) {
-        
-        catchError(error)
+        return catchError(error)
     }
-    
-}
+}

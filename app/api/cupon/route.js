@@ -1,8 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
-import { catchError } from "@/lib/helperFunction";
-import CuponModel from "@/models/Cupon.model";
-
+import prisma from "@/lib/prisma";
+import { catchError, response } from "@/lib/helperFunction";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -12,89 +10,77 @@ export async function GET(request) {
       return response(false, 403, "Unauthorized");
     }
 
-    await connectDB();
     const searchParams = request.nextUrl.searchParams;
-    const start = parseInt(searchParams.get("start") || 0, 10);
-    const size = parseInt(searchParams.get("size") || 0, 10);
+    const start = parseInt(searchParams.get("start") || "0", 10);
+    const size = parseInt(searchParams.get("size") || "10", 10);
     const filters = JSON.parse(searchParams.get("filters") || "[]");
     const globalFilter = searchParams.get("globalFilter") || "";
     const sorting = JSON.parse(searchParams.get("sorting") || "[]");
     const deleteType = searchParams.get("deleteType");
 
-    let matchQuery = {};
+    let where = {};
 
+    // Soft delete filtering
     if (deleteType === "SD") {
-      matchQuery = { deletedAt: null };
+      where.deletedAt = null;
     } else if (deleteType === "PD") {
-      matchQuery = { deletedAt: { $ne: null } };
+      where.deletedAt = { not: null };
     }
 
+    // Global filter
     if (globalFilter) {
-      matchQuery["$or"] = [
-        { code: { $regex: globalFilter, $options: "i" } },
-    { $expr: { $regexMatch: { input: { $toString: "$minimumShoppingAmount" }, regex: globalFilter, options: "i" } } },
-    { $expr: { $regexMatch: { input: { $toString: "$discountPercentage" }, regex: globalFilter, options: "i" } } },
-
+      const orConditions = [
+        { code: { contains: globalFilter, mode: 'insensitive' } }
       ];
+
+      const numFilter = parseFloat(globalFilter);
+      if (!isNaN(numFilter)) {
+        orConditions.push({ minimumShoppingAmount: numFilter });
+        orConditions.push({ discountPercentage: numFilter });
+      }
+
+      where.OR = orConditions;
     }
 
-    //column filteration
+    // Column filtration
+    if (filters.length > 0) {
+      where.AND = filters.map(filter => {
+        if (["minimumShoppingAmount", "discountPercentage"].includes(filter.id)) {
+          return { [filter.id]: parseFloat(filter.value) };
+        }
+        if (filter.id === "validity") {
+          return { [filter.id]: new Date(filter.value) };
+        }
+        return { [filter.id]: { contains: filter.value, mode: 'insensitive' } };
+      });
+    }
 
-    filters.forEach((filter) => {
-  // Check if the filter field is numeric
-  if (["minimumShoppingAmount" , "discountPercentage"].includes(filter.id)) {
-    // Convert filter value to number
-    matchQuery[filter.id] = Number(filter.value);
-  }else if(filter.id === "validity"){
-          matchQuery[filter.id] =  newDate(filter.value)
-  } else {
-    // Keep regex for string fields
-    matchQuery[filter.id] = { $regex: filter.value, $options: "i" };
-  }
-});
+    // Sorting
+    let orderBy = sorting.map(sort => ({
+        [sort.id]: sort.desc ? 'desc' : 'asc'
+    }));
 
-    // sorting
-
-    let sortQuery = {};
-    sorting.forEach((sort) => {
-      sortQuery[sort.id] = sort.desc ? -1 : 1;
-    });
-
-    // aggregate pipeline
-
-    const aggregatePipeline = [
-      
-      { $match: matchQuery },
-      { $sort: Object.keys(sortQuery).length ? sortQuery : { createdAt: -1 } },
-      { $skip: start },
-      { $limit: size },
-      {
-        $project: {
-          _id: 1,
-          code: 1,
-          minimumShoppingAmount: 1,
-          discountPercentage: 1,
-          validity : 1,
-          createdAt: 1,
-          updatedAt: 1,
-          deletedAt: 1,
-        },
-      },
-    ];
+    if (orderBy.length === 0) {
+      orderBy = [{ createdAt: 'desc' }];
+    }
 
     // Execute query
+    const coupons = await prisma.cupon.findMany({
+      where,
+      orderBy,
+      skip: start,
+      take: size
+    });
 
-    const getCupon = await CuponModel.aggregate(aggregatePipeline);
-    // get total row count
-
-    const totalRowCount = await CuponModel.countDocuments(matchQuery);
+    const totalRowCount = await prisma.cupon.count({ where });
 
     return NextResponse.json({
       success: true,
-      data: getCupon,
+      data: coupons,
       meta: { totalRowCount },
     });
   } catch (error) {
     return catchError(error);
   }
 }
+

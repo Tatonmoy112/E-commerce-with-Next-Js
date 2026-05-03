@@ -6,7 +6,7 @@ const DeleteAction = ({ handleDelete, row, deleteType }) => {
   return (
     <MenuItem
       key="delete"
-      onClick={() => handleDelete([row.original._id], deleteType)}
+      onClick={() => handleDelete([row.original.id || row.original._id], deleteType)}
     >
       <ListItemIcon>
         <DeleteIcon />

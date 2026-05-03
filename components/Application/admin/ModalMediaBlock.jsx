@@ -5,13 +5,13 @@ import React from 'react'
 const ModalMediaBlock = ({media,selectedMedia,setSelectedMedia,isMultiple}) => {
      
    const handleCheck = () => {
-  const isSelected = selectedMedia.some(m => m._id === media._id);
+  const isSelected = selectedMedia.some(m => m.id === media.id);
   let newSelectedMedia = [];
 
   if (isMultiple) {
     if (isSelected) {
       // remove only this one
-      newSelectedMedia = selectedMedia.filter(m => m._id !== media._id);
+      newSelectedMedia = selectedMedia.filter(m => m.id !== media.id);
     } else {
       // add new one (store full media object!)
       newSelectedMedia = [...selectedMedia, media];
@@ -26,12 +26,12 @@ const ModalMediaBlock = ({media,selectedMedia,setSelectedMedia,isMultiple}) => {
 
  
     return (
-    <label htmlFor={media._id} className='border border-gray-200 dark:border-gray-800 relative group rounded overflow-hidden' >
+    <label htmlFor={media.id} className='border border-gray-200 dark:border-gray-800 relative group rounded overflow-hidden' >
 
       <div className='absolute top-2 left-2 z-20'> 
         <Checkbox 
-        id={media._id} 
-        checked={selectedMedia.find(m=> m._id === media._id ) ? true : false}
+        id={media.id} 
+        checked={selectedMedia.find(m=> m.id === media.id ) ? true : false}
         onCheckedChange={handleCheck}
         />
       </div>

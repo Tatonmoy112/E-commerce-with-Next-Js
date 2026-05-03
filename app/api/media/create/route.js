@@ -1,23 +1,26 @@
 import { isAuthenticated } from "@/lib/authentication";
 import cloudinary from "@/lib/cloudinary";
-import { connectDB } from "@/lib/db";
-import { catchError,  response } from "@/lib/helperFunction";
-import MediaModel from "@/models/Media.model";
+import prisma from "@/lib/prisma";
+import { catchError, response } from "@/lib/helperFunction";
 
 export async function POST(request) {
   const payload = await request.json();
 
   try {
-    const auth = await isAuthenticated("admin", request); // PASS request HERE
+    const auth = await isAuthenticated("admin", request);
 
     if (!auth.isAuth) {
       return response(false, 403, "Unauthorized");
     }
 
-    await connectDB();
-    const newMedia = await MediaModel.insertMany(payload);
+    // createMany returns the count of inserted records
+    await prisma.media.createMany({
+      data: payload,
+    });
 
-    return response(true, 200, "Media uploaded successfully", newMedia);
+    // Fetch the newly created media if needed, or just return success
+    // For simplicity and matching Mongoose insertMany behavior as much as possible:
+    return response(true, 200, "Media uploaded successfully", payload);
 
   } catch (error) {
     if (payload && payload.length > 0) {
@@ -33,3 +36,4 @@ export async function POST(request) {
     return catchError(error);
   }
 }
+

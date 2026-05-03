@@ -1,18 +1,17 @@
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    console.log("🧠 MONGODB_URL:", process.env.MONGODB_URL); // 👈 log it for debugging
-
-    await connectDB();
+    // Simple query to check connection
+    await prisma.$queryRaw`SELECT 1`;
 
     return NextResponse.json({
       success: true,
-      message: "✅ Successfully Connected to MongoDB",
+      message: "✅ Successfully Connected to PostgreSQL via Prisma",
     });
   } catch (error) {
-    console.error("❌ DB connection error:", error); // 👈 log the actual error
+    console.error("❌ Prisma connection error:", error);
     return NextResponse.json(
       {
         success: false,
@@ -23,3 +22,4 @@ export async function GET() {
     );
   }
 }
+

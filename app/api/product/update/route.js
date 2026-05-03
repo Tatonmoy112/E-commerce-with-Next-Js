@@ -1,15 +1,19 @@
-import { connectDB } from "@/lib/db";
+import { isAuthenticated } from "@/lib/authentication";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
 import { zschema } from "@/lib/ZodSchema";
-import ProductModel from "@/models/Product.model";
 
 export async function PUT(request) {
   try {
-    await connectDB();
+    const auth = await isAuthenticated('admin', request)
+    if (!auth.isAuth){
+        return response(false, 403, 'Unauthorized')
+    }
+
     const payload = await request.json();
 
     const schema = zschema.pick({
-      _id: true,
+      id: true,
       name: true,
       slug: true,
       description: true,
@@ -26,7 +30,7 @@ export async function PUT(request) {
     }
 
     const {
-      _id,
+      id,
       name,
       slug,
       description,
@@ -38,9 +42,11 @@ export async function PUT(request) {
     } = validate.data;
 
     // Find product first
-    const product = await ProductModel.findOne({
-      deletedAt: null,
-      _id,
+    const product = await prisma.product.findUnique({
+      where: {
+        id: id,
+        deletedAt: null,
+      }
     });
 
     if (!product) {
@@ -48,19 +54,28 @@ export async function PUT(request) {
     }
 
     // Update product fields
-    product.name = name;
-    product.slug = slug;
-    product.description = description;
-    product.mrp = mrp;
-    product.sellingPrice = sellingPrice;
-    product.discountPercentage = discountPercentage;
-    product.category =category ; // categoryId
-    product.media = media; // array of media IDs
+    await prisma.product.update({
+      where: { id: id },
+      data: {
+        name,
+        slug,
+        description,
+        mrp,
+        sellingPrice,
+        discountPercentage,
+        category: {
+          connect: { id: category }
+        },
+        media: {
+          set: media.map(id => ({ id }))
+        }
+      }
+    });
 
-    await product.save();
 
     return response(true, 200, "Product updated successfully");
   } catch (error) {
     return catchError(error);
   }
 }
+

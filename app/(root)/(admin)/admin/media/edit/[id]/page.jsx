@@ -23,7 +23,7 @@ const breadcrumbData = [
 ];
 
 const formSchema = zschema.pick({
-  _id:true,
+  id:true,
   alt: true,
   title:true
 })
@@ -38,7 +38,7 @@ const EditMedia = ({params}) => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-     _id: '',
+     id: '',
      alt: '',
      title: '',
     },
@@ -48,7 +48,7 @@ const EditMedia = ({params}) => {
     if(mediaData && mediaData.success){
       const data = mediaData.data
       form.reset({
-        _id:data._id,
+        id:data.id,
         alt : data.alt,
         title: data.title
       })

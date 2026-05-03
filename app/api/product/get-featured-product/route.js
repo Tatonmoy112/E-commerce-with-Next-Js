@@ -1,16 +1,18 @@
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import ProductModel from "@/models/Product.model";
-import MediaModel from "@/models/Media.model";
+
 export async function GET() {
   try {
-    await connectDB();
-    const product = await ProductModel.find({  deletedAt: null })
-      .populate("media", "asset_id public_id path thumbnail_url secure_url alt title")
-      .limit(8)
-      .lean();
+    const product = await prisma.product.findMany({
+      where: { deletedAt: null },
+      take: 8,
+      include: {
+        media: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
 
-    if (!product) {
+    if (!product || product.length === 0) {
       return response(false, 404, "Product not found");
     }
 
@@ -19,3 +21,4 @@ export async function GET() {
     return catchError(error);
   }
 }
+

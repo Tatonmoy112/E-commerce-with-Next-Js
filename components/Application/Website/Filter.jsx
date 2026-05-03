@@ -94,7 +94,7 @@ const handleSizeFilter = (size) => {
               <ul>
                 {categoryData?.success &&
                   categoryData.data?.map((category) => (
-                    <li key={category._id} className="mb-3">
+                    <li key={category.id} className="mb-3">
                       <label className="flex items-center space-x-3 cursor-pointer ">
                         <Checkbox 
                         onCheckedChange= {()=> handleCategoryFilter(category.slug)}

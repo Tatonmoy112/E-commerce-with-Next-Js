@@ -1,8 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import ProductVariantModel from "@/models/ProductVariant.model";
-
 
 export async function GET(request) {
   try {
@@ -11,25 +9,35 @@ export async function GET(request) {
       return response(false, 403, 'Unauthorized');
     }
 
-    await connectDB();
+    const variants = await prisma.productVariant.findMany({
+      where: {
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        productId: true,
+        sku: true,
+        color: true,
+        size: true,
+        mrp: true,
+        sellingPrice: true,
+        discountPercentage: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      }
+    });
 
-    const filter = {
-      deletedAt: null,
-    };
-
-    // Return all products as an array
-    const getProductVariants = await ProductVariantModel.find(filter)
-      .select('-media ') // exclude large fields
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (!getProductVariants || !getProductVariants.length) {
-      return response(false, 404, 'No products found');
+    if (!variants || !variants.length) {
+      return response(false, 404, 'No variants found');
     }
 
-    return response(true, 200, 'Data Found', getProductVariants);
+    return response(true, 200, 'Data Found', variants);
   } catch (error) {
     return catchError(error);
   }
 }
+
 

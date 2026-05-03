@@ -1,9 +1,7 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import ProductModel from "@/models/Product.model";
-import { isValidObjectId } from "mongoose";
-import MediaModel from "@/models/Media.model";
+
 export async function GET(request, { params }) {
   try {
     const auth = await isAuthenticated("admin", request);
@@ -11,22 +9,22 @@ export async function GET(request, { params }) {
       return response(false, 403, "Unauthorized");
     }
 
-    await connectDB();
-
-     const resolvedParams = await params; // <-- unwrap the Promise
+    const resolvedParams = await params; 
     const { id } = resolvedParams;
-     console.log("Product ID:", id);
 
-    if (!isValidObjectId(id)) {
-      return response(false, 404, "Invalid object id");
+    if (!id) {
+      return response(false, 400, "ID is required");
     }
-    console.log("Product ID:", id);
 
-
-    const product = await ProductModel.findOne({ _id: id, deletedAt: null })
-      .populate("media", "asset_id public_id path thumbnail_url secure_url alt title")
-      .populate("category", "name slug")
-      .lean();
+    const product = await prisma.product.findUnique({
+      where: { id, deletedAt: null },
+      include: {
+        media: true,
+        category: {
+            select: { name: true, slug: true }
+        }
+      }
+    });
 
     if (!product) {
       return response(false, 404, "Product not found");
@@ -37,3 +35,4 @@ export async function GET(request, { params }) {
     return catchError(error);
   }
 }
+

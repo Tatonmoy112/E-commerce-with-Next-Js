@@ -1,24 +1,28 @@
-import { connectDB } from "@/lib/db";
+import { isAuthenticated } from "@/lib/authentication";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
 import { zschema } from "@/lib/ZodSchema";
-import ProductVariantModel from "@/models/ProductVariant.model";
 
 export async function PUT(request) {
   try {
-    await connectDB();
+    const auth = await isAuthenticated('admin', request)
+    if (!auth.isAuth){
+        return response(false, 403, 'Unauthorized')
+    }
+
     const payload = await request.json();
 
- const schema = zschema.pick({
-  _id:true,
-  product: true,
-  sku: true,
-  color: true,
-  size: true,
-  mrp: true,
-  sellingPrice: true,
-  discountPercentage: true,
-  media: true,
-});
+    const schema = zschema.pick({
+      id: true,
+      product: true,
+      sku: true,
+      color: true,
+      size: true,
+      mrp: true,
+      sellingPrice: true,
+      discountPercentage: true,
+      media: true,
+    });
 
     const validate = schema.safeParse(payload);
     if (!validate.success) {
@@ -26,7 +30,7 @@ export async function PUT(request) {
     }
 
     const {
-      _id,
+      id,
       product,
       color,
       size,
@@ -37,30 +41,39 @@ export async function PUT(request) {
       media,
     } = validate.data;
 
-    // Find product first
-    const productVariant = await ProductVariantModel.findOne({
-      deletedAt: null,
-      _id,
+    // Find variant first
+    const productVariant = await prisma.productVariant.findUnique({
+      where: {
+        id: id,
+        deletedAt: null,
+      }
     });
 
     if (!productVariant) {
-      return response(false, 404, "Product not found");
+      return response(false, 404, "Product Variant not found");
     }
 
     // Update productVariant fields
-    productVariant.product = product;
-    productVariant.color = color;
-    productVariant.size = size;
-    productVariant.sku = sku;
-    productVariant.mrp = mrp;
-    productVariant.sellingPrice = sellingPrice;
-    productVariant.discountPercentage = discountPercentage;
-    productVariant.media = media; // array of media IDs
-
-    await productVariant.save();
+    await prisma.productVariant.update({
+      where: { id: id },
+      data: {
+        product: { connect: { id: product } },
+        color,
+        size,
+        sku,
+        mrp,
+        sellingPrice,
+        discountPercentage,
+        media: {
+          set: [], // Clear existing
+          connect: (media || []).map(id => ({ id }))
+        }
+      }
+    });
 
     return response(true, 200, "Product Variant updated successfully");
   } catch (error) {
     return catchError(error);
   }
 }
+

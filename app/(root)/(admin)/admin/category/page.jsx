@@ -27,7 +27,7 @@ const ShowCategory = () => {
 
   const action = useCallback((row,deleteType,handleDelete)=>{
      let actionMenu = []
-     actionMenu.push( <EditAction key='edit' href={ADMIN_CATEGORY_EDIT(row.original._id)} /> )
+     actionMenu.push( <EditAction key='edit' href={ADMIN_CATEGORY_EDIT(row.original.id || row.original._id)} /> )
      actionMenu.push( <DeleteAction key='delete' handleDelete={handleDelete} row={row} deleteType={deleteType} /> )
      return actionMenu
   })

@@ -1,30 +1,39 @@
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
 import { zschema } from "@/lib/ZodSchema";
-import UserModel from "@/models/User.model";
+import bcrypt from "bcrypt";
 
 export async function PUT(request){
     try {
-        await connectDB()
         const payload = await request.json();
         const validationSchema = zschema.pick({
-            email:true, password:true
+            email: true, 
+            password: true
         })
-        const validatedData= validationSchema.safeParse(payload)
-              if(!validatedData.success){
-                return response(false,401,'Invalid or missing input field', validatedData.error )
-              }
-        const { email,password} = validatedData.data
-        const getUser = await UserModel.findOne({deletedAt:null,email}).select("+password")
-            if(!getUser){
-                return response(false,404,"User not found")
-            }
+        const validatedData = validationSchema.safeParse(payload)
+        if (!validatedData.success) {
+            return response(false, 401, 'Invalid or missing input field', validatedData.error)
+        }
+        
+        const { email, password } = validatedData.data
+        const user = await prisma.user.findFirst({
+            where: { email, deletedAt: null }
+        })
+        
+        if (!user) {
+            return response(false, 404, "User not found")
+        }
 
-        getUser.password = password
-        await getUser.save()
-        return response(true,200,"Password updated successfully")
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { password: hashedPassword }
+        });
+
+        return response(true, 200, "Password updated successfully")
 
     } catch (error) {
         return catchError(error);
     }
-}
+}

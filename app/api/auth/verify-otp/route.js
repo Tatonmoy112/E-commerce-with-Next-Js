@@ -1,15 +1,11 @@
 import { SignJWT } from "jose";
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
 import { zschema } from "@/lib/ZodSchema";
-import OTPModel from "@/models/Otp.model";
-import UserModel from "@/models/User.model";
 
 export async function POST(request) {
   try {
-    await connectDB();
-
     const payload = await request.json();
     const validationSchema = zschema.pick({ otp: true, email: true });
     const validatedData = validationSchema.safeParse(payload);
@@ -23,7 +19,10 @@ export async function POST(request) {
 
     const { email, otp } = validatedData.data;
 
-    const getOtpData = await OTPModel.findOne({ email, otp });
+    const getOtpData = await prisma.otp.findFirst({
+      where: { email, otp }
+    });
+    
     if (!getOtpData) {
       return NextResponse.json(
         { success: false, message: "Invalid or expired OTP" },
@@ -31,16 +30,19 @@ export async function POST(request) {
       );
     }
 
-    const getUser = await UserModel.findOne({ email, deletedAt: null }).lean();
+    const getUser = await prisma.user.findUnique({
+      where: { email, deletedAt: null }
+    });
+    
     if (!getUser) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
 
     const loggedInUserData = {
-      userId: getUser._id.toString(),
+      userId: getUser.id,
       role: getUser.role,
       name: getUser.name,
-      avatar: getUser.avatar,
+      avatar: getUser.avatar_url,
     };
 
     const secret = new TextEncoder().encode(process.env.SECRET_KEY);
@@ -50,7 +52,9 @@ export async function POST(request) {
       .setProtectedHeader({ alg: "HS256" })
       .sign(secret);
 
-    await getOtpData.deleteOne();
+    await prisma.otp.delete({
+      where: { id: getOtpData.id }
+    });
 
     // ✅ Set cookie using NextResponse
     const res = NextResponse.json({ success: true, message: "Login Successful", data: loggedInUserData });
@@ -68,3 +72,4 @@ export async function POST(request) {
     return NextResponse.json({ success: false, message: error.message || "Server Error" }, { status: 500 });
   }
 }
+

@@ -1,30 +1,30 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import CategoryModel from "@/models/Category.model";
 
 export async function GET(request) {
   try {
-       const auth = await isAuthenticated('admin',request)
+    const auth = await isAuthenticated('admin', request)
     if (!auth.isAuth){
-        return response(false,403,'Unauthorized')
+        return response(false, 403, 'Unauthorized')
     }
-    await connectDB();
 
-    const filter = {
-      deletedAt: null,
-    };
+    const categories = await prisma.category.findMany({
+      where: {
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      }
+    });
 
-    const getCategory = await CategoryModel.findOne(filter)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (!getCategory) {
+    if (!categories || !categories.length) {
       return response(false, 404, "Collection empty");
     }
 
-    return response(true, 200, "Data Found", getCategory);
+    return response(true, 200, "Data Found", categories);
   } catch (error) {
     return catchError(error);
   }
 }
+

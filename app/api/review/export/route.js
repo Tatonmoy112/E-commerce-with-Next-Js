@@ -1,9 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import ReviewModel from "@/models/Review.model";
-
-
 
 export async function GET(request) {
   try {
@@ -12,24 +9,37 @@ export async function GET(request) {
       return response(false, 403, 'Unauthorized');
     }
 
-    await connectDB();
+    const reviews = await prisma.review.findMany({
+      where: {
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        product: { select: { name: true } },
+        user: { select: { name: true, email: true } }
+      }
+    });
 
-    const filter = {
-      deletedAt: null,
-    };
-
-    // Return all products as an array
-    const getReview = await ReviewModel.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (!getReview || !getReview.length) {
-      return response(false, 404, 'No products found');
+    if (!reviews || !reviews.length) {
+      return response(false, 404, 'No reviews found');
     }
 
-    return response(true, 200, 'Data Found', getReview);
+    // Flatten relational data for export
+    const flattenedReviews = reviews.map(review => ({
+        ...review,
+        productName: review.product?.name,
+        userName: review.user?.name,
+        userEmail: review.user?.email,
+        product: undefined,
+        user: undefined
+    }));
+
+    return response(true, 200, 'Data Found', flattenedReviews);
   } catch (error) {
     return catchError(error);
   }
 }
+
 

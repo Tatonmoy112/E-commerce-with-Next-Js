@@ -1,8 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
-import { catchError } from "@/lib/helperFunction";
-import UserModel from "@/models/User.model";
-
+import prisma from "@/lib/prisma";
+import { catchError, response } from "@/lib/helperFunction";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -12,83 +10,87 @@ export async function GET(request) {
       return response(false, 403, "Unauthorized");
     }
 
-    await connectDB();
     const searchParams = request.nextUrl.searchParams;
-    const start = parseInt(searchParams.get("start") || 0, 10);
-    const size = parseInt(searchParams.get("size") || 0, 10);
+    const start = parseInt(searchParams.get("start") || "0", 10);
+    const size = parseInt(searchParams.get("size") || "10", 10);
     const filters = JSON.parse(searchParams.get("filters") || "[]");
     const globalFilter = searchParams.get("globalFilter") || "";
     const sorting = JSON.parse(searchParams.get("sorting") || "[]");
     const deleteType = searchParams.get("deleteType");
 
-    let matchQuery = {};
+    let where = {};
 
+    // Soft delete filtering
     if (deleteType === "SD") {
-      matchQuery = { deletedAt: null };
+      where.deletedAt = null;
     } else if (deleteType === "PD") {
-      matchQuery = { deletedAt: { $ne: null } };
+      where.deletedAt = { not: null };
     }
 
     // Global search
     if (globalFilter) {
       const gfLower = globalFilter.toLowerCase();
       let isVerifiedFilter = null;
-      if (gfLower === "true") isVerifiedFilter = true;
-      else if (gfLower === "false") isVerifiedFilter = false;
+      if (gfLower === "true" || gfLower === "verified") isVerifiedFilter = true;
+      else if (gfLower === "false" || gfLower === "unverified") isVerifiedFilter = false;
 
-      matchQuery["$or"] = [
-        { name: { $regex: globalFilter, $options: "i" } },
-        { email: { $regex: globalFilter, $options: "i" } },
-        { phone: { $regex: globalFilter, $options: "i" } },
-        { address: { $regex: globalFilter, $options: "i" } },
-        { role: { $regex: globalFilter, $options: "i" } },
-        ...(isVerifiedFilter !== null ? [{ isEmailVerified: isVerifiedFilter }] : []),
+      where.OR = [
+        { name: { contains: globalFilter, mode: 'insensitive' } },
+        { email: { contains: globalFilter, mode: 'insensitive' } },
+        { phone: { contains: globalFilter, mode: 'insensitive' } },
+        { address: { contains: globalFilter, mode: 'insensitive' } },
       ];
+
+      if (isVerifiedFilter !== null) {
+        where.OR.push({ isEmailVerified: isVerifiedFilter });
+      }
     }
 
     // Column filters
-filters.forEach((filter) => {
-  if (filter.id === "role") {
-    matchQuery[filter.id] = filter.value.trim();
-  } else if (filter.id === "isEmailVerified") {
-    const val = filter.value.toLowerCase();
-    matchQuery[filter.id] = val === "true" || val === "verified";
-  } else {
-    matchQuery[filter.id] = { $regex: filter.value, $options: "i" };
-  }
-});
-
+    if (filters.length > 0) {
+      where.AND = filters.map(filter => {
+        if (filter.id === "isEmailVerified") {
+          const val = filter.value.toLowerCase();
+          return { isEmailVerified: val === "true" || val === "verified" };
+        }
+        if (filter.id === "role") {
+          return { role: filter.value.trim() };
+        }
+        return { [filter.id]: { contains: filter.value, mode: 'insensitive' } };
+      });
+    }
 
     // Sorting
-    let sortQuery = {};
-    sorting.forEach((sort) => {
-      sortQuery[sort.id] = sort.desc ? -1 : 1;
+    let orderBy = sorting.map(sort => ({
+        [sort.id]: sort.desc ? 'desc' : 'asc'
+    }));
+
+    if (orderBy.length === 0) {
+      orderBy = [{ createdAt: 'desc' }];
+    }
+
+    // Execute query
+    const users = await prisma.user.findMany({
+      where,
+      orderBy,
+      skip: start,
+      take: size,
+      select: {
+        id: true,
+        role: true,
+        name: true,
+        email: true,
+        phone: true,
+        address: true,
+        avatar_url: true,
+        isEmailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      }
     });
 
-    const aggregatePipeline = [
-      { $match: matchQuery },
-      { $sort: Object.keys(sortQuery).length ? sortQuery : { createdAt: -1 } },
-      { $skip: start },
-      { $limit: size },
-      {
-        $project: {
-          _id: 1,
-          role: 1,
-          name: 1,
-          email: 1,
-          phone: 1,
-          address: 1,
-          avtar: 1,
-          isEmailVerified: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          deletedAt: 1,
-        },
-      },
-    ];
-
-    const users = await UserModel.aggregate(aggregatePipeline);
-    const totalRowCount = await UserModel.countDocuments(matchQuery);
+    const totalRowCount = await prisma.user.count({ where });
 
     return NextResponse.json({
       success: true,
@@ -99,3 +101,4 @@ filters.forEach((filter) => {
     return catchError(error);
   }
 }
+

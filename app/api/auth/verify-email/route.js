@@ -1,13 +1,9 @@
 // app/api/auth/verify-email/route.js
-import { connectDB } from "@/lib/db";
-import UserModel from "@/models/User.model";
-// import User from "@/models/User.model";
+import prisma from "@/lib/prisma";
 import { jwtVerify } from "jose";
 
 export async function GET(req) {
   try {
-    await connectDB();
-
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
 
@@ -17,12 +13,17 @@ export async function GET(req) {
     const decoded = await jwtVerify(token, secret);
     const userId = decoded.payload.userId;
 
-    const user = await UserModel.findById(userId);
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
     if (!user) throw new Error("User not found!");
 
     if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      await user.save();
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isEmailVerified: true }
+      });
     }
 
     // ✅ Return HTML with SweetAlert
@@ -83,3 +84,4 @@ export async function GET(req) {
     });
   }
 }
+

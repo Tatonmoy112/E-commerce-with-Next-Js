@@ -1,8 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import CuponModel from "@/models/Cupon.model";
-
 
 export async function GET(request) {
   try {
@@ -11,24 +9,23 @@ export async function GET(request) {
       return response(false, 403, 'Unauthorized');
     }
 
-    await connectDB();
+    const coupons = await prisma.cupon.findMany({
+      where: {
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      }
+    });
 
-    const filter = {
-      deletedAt: null,
-    };
-
-    // Return all products as an array
-    const getCupon = await CuponModel.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (!getCupon || !getCupon.length) {
-      return response(false, 404, 'No products found');
+    if (!coupons || !coupons.length) {
+      return response(false, 404, 'No coupons found');
     }
 
-    return response(true, 200, 'Data Found', getCupon);
+    return response(true, 200, 'Data Found', coupons);
   } catch (error) {
     return catchError(error);
   }
 }
+
 

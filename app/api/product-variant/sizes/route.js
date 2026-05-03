@@ -1,41 +1,24 @@
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import ProductVariantModel from "@/models/ProductVariant.model";
-
-
 
 export async function GET() {
   try {
-   
-    await connectDB();
+    const sizesData = await prisma.productVariant.findMany({
+      where: { deletedAt: null },
+      select: { size: true },
+      distinct: ['size'],
+      orderBy: { createdAt: 'asc' }
+    });
 
-    const getSize = await ProductVariantModel.aggregate([
-  {
-    $group: {
-      _id: "$size",
-      first: { $first: "$_id" }
-    }
-  },
-  {
-    $sort: { first: 1 }
-  },
-  {
-    $project: {
-      _id: 0,
-      size: "$_id"
-    }
-  }
-])
+    const sizes = sizesData.map(s => s.size);
 
-
-    if (!getSize.length) {
-      return response(false, 404, "Size not found");
+    if (!sizes.length) {
+      return response(false, 404, "Sizes not found");
     }
 
-    const sizes = getSize.map(item=>item.size)
-
-    return response(true, 200, "Size Found", sizes);
+    return response(true, 200, "Sizes Found", sizes);
   } catch (error) {
     return catchError(error);
   }
 }
+

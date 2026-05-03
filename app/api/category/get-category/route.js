@@ -1,16 +1,13 @@
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import CategoryModel from "@/models/Category.model";
-
 
 export async function GET() {
   try {
-   
-    await connectDB();
+    const getCategory = await prisma.category.findMany({
+      where: { deletedAt: null }
+    });
 
-    const getCategory = await CategoryModel.find({deletedAt: null}).lean();
-
-    if (!getCategory) {
+    if (!getCategory || getCategory.length === 0) {
       return response(false, 404, "Category not found");
     }
 
@@ -19,3 +16,4 @@ export async function GET() {
     return catchError(error);
   }
 }
+

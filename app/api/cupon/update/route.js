@@ -1,15 +1,19 @@
-import { connectDB } from "@/lib/db";
+import { isAuthenticated } from "@/lib/authentication";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
 import { zschema } from "@/lib/ZodSchema";
-import CuponModel from "@/models/Cupon.model";
 
 export async function PUT(request) {
   try {
-    await connectDB();
+    const auth = await isAuthenticated('admin', request)
+    if (!auth.isAuth){
+        return response(false, 403, 'Unauthorized')
+    }
+
     const payload = await request.json();
 
     const schema = zschema.pick({
-      _id: true,
+      id: true,
      code: true,
      discountPercentage: true,
      minimumShoppingAmount: true,
@@ -22,7 +26,7 @@ export async function PUT(request) {
     }
 
     const {
-      _id,
+      id,
       code,
       discountPercentage,
       minimumShoppingAmount,
@@ -30,27 +34,32 @@ export async function PUT(request) {
       
     } = validate.data;
 
-    // Find cupon first
-    const cupon = await CuponModel.findOne({
-      deletedAt: null,
-      _id,
+    // Find coupon first
+    const coupon = await prisma.cupon.findUnique({
+      where: {
+        id: id,
+        deletedAt: null,
+      }
     });
 
-    if (!cupon) {
-      return response(false, 404, "Cupon not found");
+    if (!coupon) {
+      return response(false, 404, "Coupon not found");
     }
 
-    // Update cupon fields
-    cupon. code = code;
-    cupon. discountPercentage = discountPercentage;
-    cupon. minimumShoppingAmount = minimumShoppingAmount;
-    cupon. validity = validity;
-    
+    // Update coupon fields
+    await prisma.cupon.update({
+      where: { id: id },
+      data: {
+        code,
+        discountPercentage,
+        minimumShoppingAmount,
+        validity: new Date(validity),
+      }
+    });
 
-    await cupon.save();
-
-    return response(true, 200, "Cupon updated successfully");
+    return response(true, 200, "Coupon updated successfully");
   } catch (error) {
     return catchError(error);
   }
 }
+

@@ -1,8 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
-import { catchError } from "@/lib/helperFunction";
-import ReviewModel from "@/models/Review.model";
-
+import prisma from "@/lib/prisma";
+import { catchError, response } from "@/lib/helperFunction";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -12,109 +10,95 @@ export async function GET(request) {
       return response(false, 403, "Unauthorized");
     }
 
-    await connectDB();
     const searchParams = request.nextUrl.searchParams;
-    const start = parseInt(searchParams.get("start") || 0, 10);
-    const size = parseInt(searchParams.get("size") || 0, 10);
+    const start = parseInt(searchParams.get("start") || "0", 10);
+    const size = parseInt(searchParams.get("size") || "10", 10);
     const filters = JSON.parse(searchParams.get("filters") || "[]");
     const globalFilter = searchParams.get("globalFilter") || "";
     const sorting = JSON.parse(searchParams.get("sorting") || "[]");
     const deleteType = searchParams.get("deleteType");
 
-    let matchQuery = {};
+    let where = {};
 
+    // Soft delete filtering
     if (deleteType === "SD") {
-      matchQuery = { deletedAt: null };
+      where.deletedAt = null;
     } else if (deleteType === "PD") {
-      matchQuery = { deletedAt: { $ne: null } };
+      where.deletedAt = { not: null };
     }
 
-    // Global search
+    // Global filter
     if (globalFilter) {
-      const gfLower = globalFilter.toLowerCase();
-      let isVerifiedFilter = null;
-      if (gfLower === "true") isVerifiedFilter = true;
-      else if (gfLower === "false") isVerifiedFilter = false;
-
-      matchQuery["$or"] = [
-        { 'productData.name': { $regex: globalFilter, $options: "i" } },
-        { 'userData.name': { $regex: globalFilter, $options: "i" } },
-        { rating: { $regex: globalFilter, $options: "i" } },
-        { title: { $regex: globalFilter, $options: "i" } },
-        { review: { $regex: globalFilter, $options: "i" } },
-        
+      const orConditions = [
+        { title: { contains: globalFilter, mode: 'insensitive' } },
+        { review: { contains: globalFilter, mode: 'insensitive' } },
+        { product: { name: { contains: globalFilter, mode: 'insensitive' } } },
+        { user: { name: { contains: globalFilter, mode: 'insensitive' } } }
       ];
+
+      const numFilter = parseFloat(globalFilter);
+      if (!isNaN(numFilter)) {
+        orConditions.push({ rating: numFilter });
+      }
+
+      where.OR = orConditions;
     }
 
-    // Column filters
-filters.forEach((filter) => {
-  if (filter.id === "product") {
-    matchQuery['productData.name'] = { $regex: filter.value, $options: "i" };
-  } else if (filter.id === "user") {
-    matchQuery['userData.name'] = { $regex: filter.value, $options: "i" };
-  } else {
-    matchQuery[filter.id] = { $regex: filter.value, $options: "i" };
-  }
-});
-
+    // Column filtration
+    if (filters.length > 0) {
+      where.AND = filters.map(filter => {
+        if (filter.id === "rating") {
+          return { rating: parseFloat(filter.value) };
+        }
+        if (filter.id === "product") {
+          return { product: { name: { contains: filter.value, mode: 'insensitive' } } };
+        }
+        if (filter.id === "user") {
+          return { user: { name: { contains: filter.value, mode: 'insensitive' } } };
+        }
+        return { [filter.id]: { contains: filter.value, mode: 'insensitive' } };
+      });
+    }
 
     // Sorting
-    let sortQuery = {};
-    sorting.forEach((sort) => {
-      sortQuery[sort.id] = sort.desc ? -1 : 1;
+    let orderBy = sorting.map(sort => {
+        if (sort.id === "product") return { product: { name: sort.desc ? 'desc' : 'asc' } };
+        if (sort.id === "user") return { user: { name: sort.desc ? 'desc' : 'asc' } };
+        return { [sort.id]: sort.desc ? 'desc' : 'asc' };
     });
 
-    const aggregatePipeline = [
-     
-     {
-        $lookup: {
-          from: "products",
-          localField: "product",
-          foreignField: "_id",
-          as: "productData",
-        },
-      },
-     {
-        $lookup: {
-          from: "getReview",
-          localField: "user",
-          foreignField: "_id",
-          as: "userData",
-        },
-      },
-      { $unwind: { path: "$productData", preserveNullAndEmptyArrays: true } },
-      { $unwind: { path: "$userData", preserveNullAndEmptyArrays: true } },
-      { $match: matchQuery },
+    if (orderBy.length === 0) {
+      orderBy = [{ createdAt: 'desc' }];
+    }
 
+    // Execute query
+    const reviews = await prisma.review.findMany({
+      where,
+      orderBy,
+      skip: start,
+      take: size,
+      include: {
+        product: true,
+        user: true,
+      }
+    });
 
-      { $match: matchQuery },
-      { $sort: Object.keys(sortQuery).length ? sortQuery : { createdAt: -1 } },
-      { $skip: start },
-      { $limit: size },
-      {
-        $project: {
-          _id: 1,
-          product: "$productData.name",
-          user: "$userData.name",
-          rating:1,
-          title:1,
-          rating:1,
-          createdAt: 1,
-          updatedAt: 1,
-          deletedAt: 1,
-        },
-      },
-    ];
+    // Format output to match frontend expectation
+    const formattedReviews = reviews.map(r => ({
+        ...r,
+        product: r.product ? r.product.name : null,
+        user: r.user ? r.user.name : null,
+    }));
 
-    const getReview = await ReviewModel.aggregate(aggregatePipeline);
-    const totalRowCount = await UserModel.countDocuments(matchQuery);
+    const totalRowCount = await prisma.review.count({ where });
 
     return NextResponse.json({
       success: true,
-      data: getReview,
+      data: formattedReviews,
       meta: { totalRowCount },
     });
   } catch (error) {
     return catchError(error);
   }
 }
+

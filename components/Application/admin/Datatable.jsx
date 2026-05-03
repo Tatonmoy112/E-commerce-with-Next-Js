@@ -32,8 +32,8 @@ const Datatable = ({
   createAction,
 }) => {
   const [columnFilters, setColumnFilters] = useState([]);
-  const [globalFilter, setGlobalFilter] = useState([""]);
-  const [sorting, setSorting] = useState([""]);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState([]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: initialPageSize,
@@ -151,7 +151,8 @@ const Datatable = ({
       sorting,
       rowSelection,
     },
-    getRowId: (originalRow) => originalRow._id,
+    getRowId: (originalRow) => originalRow.id || originalRow._id,
+
 
     renderToolbarInternalActions: ({ table }) => (
       <>

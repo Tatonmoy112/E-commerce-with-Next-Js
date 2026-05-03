@@ -24,7 +24,7 @@ const breadcrumbData = [
 const EditProductVariant = ({ id }) => {
   const [loading, setLoading] = useState(false);
   const [variant, setVariant] = useState({
-    product: { _id: "", name: "" },
+    product: { id: "", name: "" },
     size: "",
     color: "",
     sku: "",
@@ -63,7 +63,7 @@ const EditProductVariant = ({ id }) => {
     if (variantData?.success && allProducts.length > 0) {
       const v = variantData.data;
       const initial = {
-        product: v.product || { _id: "", name: "" },
+        product: v.product || { id: "", name: "" },
         size: v.size || "",
         color: v.color || "",
         sku: v.sku || "",
@@ -99,9 +99,9 @@ const EditProductVariant = ({ id }) => {
       setLoading(true);
       const payload = {
         ...variant,
-        product: variant.product._id,
-        media: selectedMedia.map((m) => m._id),
-        _id: id,
+        product: variant.product.id,
+        media: selectedMedia.map((m) => m.id),
+        id: id,
       };
       const { data } = await axios.put("/api/product-variant/update", payload);
       if (!data.success) throw new Error(data.message);
@@ -136,15 +136,15 @@ const EditProductVariant = ({ id }) => {
               </label>
               <Select
                 options={allProducts.map((p) => ({
-                  value: p._id,
+                  value: p.id,
                   label: p.name,
                 }))}
-                selected={variant.product._id || ""} // just value
+                selected={variant.product.id || ""} // just value
                 setSelected={(val) =>
                   setVariant((prev) => ({
                     ...prev,
-                    product: allProducts.find((p) => p._id === val) || {
-                      _id: "",
+                    product: allProducts.find((p) => p.id === val) || {
+                      id: "",
                       name: "",
                     },
                   }))
@@ -239,7 +239,7 @@ const EditProductVariant = ({ id }) => {
               {selectedMedia.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-2 mb-3">
                   {selectedMedia.map((media) => (
-                    <div key={media._id} className="border p-1 rounded">
+                    <div key={media.id} className="border p-1 rounded">
                       <Image
                         src={media.secure_url || media.path}
                         alt={media.name || "media"}

@@ -92,7 +92,7 @@ const MediaModal = ({
                     <React.Fragment key={index}>
                       {page?.mediaData?.map((media) => (
                         <ModalMediaBlock
-                          key={media._id}
+                          key={media.id}
                           media={media}
                           selectedMedia={selectedMedia}
                           setSelectedMedia={setSelectedMedia}

@@ -53,9 +53,13 @@ export async function middleware(request) {
 
     return NextResponse.next();
   } catch (error) {
+    if (pathname.startsWith("/auth")) {
+      return NextResponse.next();
+    }
     return NextResponse.redirect(new URL(WEBSITE_LOGIN, request.nextUrl));
   }
 }
+
 
 
 export const config = {

@@ -1,8 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import ProductModel from "@/models/Product.model";
-
 
 export async function GET(request) {
   try {
@@ -11,25 +9,34 @@ export async function GET(request) {
       return response(false, 403, 'Unauthorized');
     }
 
-    await connectDB();
+    const products = await prisma.product.findMany({
+      where: {
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        mrp: true,
+        sellingPrice: true,
+        discountPercentage: true,
+        categoryId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      }
+    });
 
-    const filter = {
-      deletedAt: null,
-    };
-
-    // Return all products as an array
-    const getProducts = await ProductModel.find(filter)
-      .select('-media -description') // exclude large fields
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (!getProducts || !getProducts.length) {
+    if (!products || !products.length) {
       return response(false, 404, 'No products found');
     }
 
-    return response(true, 200, 'Data Found', getProducts);
+    return response(true, 200, 'Data Found', products);
   } catch (error) {
     return catchError(error);
   }
 }
+
 

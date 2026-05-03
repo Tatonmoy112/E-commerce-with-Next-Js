@@ -58,7 +58,7 @@ const AddProduct = () => {
       const data = getCategory.data;
       const options = data.map((cat) => ({
         label: cat.name,
-        value: cat._id,
+        value: cat.id,
       }));
       setCategoryOption(options);
     }
@@ -90,7 +90,7 @@ const AddProduct = () => {
         setLoading(false); 
         return showToast('error',"Please select media")
       }
-      const mediaIds= selectedMedia.map(media=>media._id)
+      const mediaIds= selectedMedia.map(media=>media.id)
       values.media= mediaIds
       const { data } = await axios.post("/api/product/create", values);
       if (!data.success) {
@@ -286,7 +286,7 @@ const AddProduct = () => {
                     {selectedMedia.length > 0 && (
                       <div className="flex justify-center items-center flex-wrap gap-2  mb-3 ">
                         {selectedMedia.map((media) => (
-                          <div key={media._id} className="border p-1 rounded">
+                          <div key={media.id} className="border p-1 rounded">
                             {media.secure_url || media.path ? (
                               <Image
                                 src={

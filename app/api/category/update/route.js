@@ -1,22 +1,20 @@
-import { connectDB } from "@/lib/db";
+import { isAuthenticated } from "@/lib/authentication";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
 import { zschema } from "@/lib/ZodSchema";
-import CategoryModel from "@/models/Category.model";
 
 export async function PUT(request) {
   try {
-    // Optional authentication check
-    // const auth = await isAuthenticated('admin')
-    // if (!auth.isAuth){
-    //     return response(false,403,'Unauthorized')
-    // }
+    const auth = await isAuthenticated('admin', request)
+    if (!auth.isAuth){
+        return response(false, 403, 'Unauthorized')
+    }
 
-    await connectDB();
     const payload = await request.json();
 
     // Validate payload
     const schema = zschema.pick({
-      _id: true,
+      id: true,
       name: true,
       slug: true,
     });
@@ -27,23 +25,26 @@ export async function PUT(request) {
       return response(false, 400, "Invalid or missing field", validate.error);
     }
 
-    const { _id, name, slug } = validate.data;
+    const { id, name, slug } = validate.data;
 
-    // Correctly fetch category without `new`
-    const getCategory = await CategoryModel.findOne({
-      deletedAt: null,
-      _id: _id,
+    const getCategory = await prisma.category.findUnique({
+      where: {
+        id: id,
+        deletedAt: null,
+      }
     });
 
     if (!getCategory) {
       return response(false, 404, "Data not found");
     }
 
-    // Update fields
-    getCategory.name = name;
-    getCategory.slug = slug;
-
-    await getCategory.save();
+    await prisma.category.update({
+      where: { id: id },
+      data: {
+        name,
+        slug
+      }
+    });
 
     return response(true, 200, "Category updated successfully");
 
@@ -51,3 +52,4 @@ export async function PUT(request) {
     return catchError(error);
   }
 }
+

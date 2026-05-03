@@ -75,7 +75,7 @@ const MediaPage = () => {
 
     if (selectAll) {
       const ids = data.pages.flatMap((page) =>
-        page.mediaData.map((media) => media._id)
+        page.mediaData.map((media) => media.id)
       );
       setSelectedMedia(ids);
     } else {
@@ -174,7 +174,7 @@ const MediaPage = () => {
           ) : (
             <>
               {data.pages.flatMap((page) =>
-                page.mediaData.map((media) => media._id)
+                page.mediaData.map((media) => media.id)
               ).length === 0 && (
                 <div className="text-center">Data not found</div>
               )}
@@ -183,7 +183,7 @@ const MediaPage = () => {
                   <React.Fragment key={index}>
                     {page?.mediaData?.map((media) => (
                       <Media
-                        key={media._id}
+                        key={media.id}
                         media={media}
                         handleDelete={handleDelete}
                         deleteType={deleteType}

@@ -1,8 +1,6 @@
 import { isAuthenticated } from "@/lib/authentication";
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError, response } from "@/lib/helperFunction";
-import UserModel from "@/models/User.model";
-
 
 export async function GET(request) {
   try {
@@ -11,24 +9,34 @@ export async function GET(request) {
       return response(false, 403, 'Unauthorized');
     }
 
-    await connectDB();
+    const users = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        address: true,
+        role: true,
+        isEmailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
 
-    const filter = {
-      deletedAt: null,
-    };
-
-    // Return all products as an array
-    const getUser = await UserModel.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (!getUser || !getUser.length) {
-      return response(false, 404, 'No products found');
+    if (!users || !users.length) {
+      return response(false, 404, 'No customers found');
     }
 
-    return response(true, 200, 'Data Found', getUser);
+    return response(true, 200, 'Data Found', users);
   } catch (error) {
     return catchError(error);
   }
 }
+
 

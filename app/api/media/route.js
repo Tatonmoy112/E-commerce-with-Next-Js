@@ -1,35 +1,36 @@
-import { connectDB } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { catchError } from "@/lib/helperFunction";
-import MediaModel from "@/models/Media.model";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
     try {
-
-        await connectDB()
         const searchParams = request.nextUrl.searchParams;
-        const page = parseInt(searchParams.get('page'),10) || 0
-        const limit = parseInt(searchParams.get('limit'),10) || 10
-        const deleteType = searchParams.get('deleteType')
+        const page = parseInt(searchParams.get('page') || "0", 10);
+        const limit = parseInt(searchParams.get('limit') || "10", 10);
+        const deleteType = searchParams.get('deleteType');
 
-        let filter = {}
-        if (deleteType === "SD"){
-            filter = {deletedAt:null}
-        }else if (deleteType === "PD"){
-            filter = {deletedAt:{$ne:null}}
+        let where = {};
+        if (deleteType === "SD") {
+            where.deletedAt = null;
+        } else if (deleteType === "PD") {
+            where.deletedAt = { not: null };
         }
 
-        const mediaData= await MediaModel.find(filter).sort({createdAt:-1}).skip(page * limit).limit(limit).lean()
-        const totalMedia = await MediaModel.countDocuments(filter)
+        const mediaData = await prisma.media.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            skip: page * limit,
+            take: limit,
+        });
+
+        const totalMedia = await prisma.media.count({ where });
 
         return NextResponse.json({
-            mediaData: mediaData,
-            hasMore : ((page +1) * limit) < totalMedia
-        })
+            mediaData,
+            hasMore: ((page + 1) * limit) < totalMedia
+        });
 
-        
     } catch (error) {
-        return catchError(error)
+        return catchError(error);
     }
-    
-}
+}

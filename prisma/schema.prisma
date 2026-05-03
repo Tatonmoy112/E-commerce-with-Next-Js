@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String    @id @default(cuid())
+  role             Role      @default(user)
+  name             String
+  email            String    @unique
+  password         String
+  avatar_url       String?
+  avatar_public_id String?
+  isEmailVerified  Boolean   @default(false)
+  phone            String?
+  address          String?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  reviews          Review[]
+  orders           Order[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Media {
+  id            String           @id @default(cuid())
+  asset_id      String
+  public_id     String
+  path          String
+  thumbnail_url String
+  secure_url    String
+  alt           String?          @default("")
+  title         String?          @default("")
+  deletedAt     DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  products      Product[]        @relation("ProductMedia")
+  variants      ProductVariant[] @relation("VariantMedia")
+}
+
+model Product {
+  id                 String           @id @default(cuid())
+  name               String
+  slug               String           @unique
+  categoryId         String
+  mrp                Float
+  sellingPrice       Float
+  discountPercentage Float
+  description        String
+  deletedAt          DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  category           Category         @relation(fields: [categoryId], references: [id])
+  variants           ProductVariant[]
+  reviews            Review[]
+  media              Media[]          @relation("ProductMedia")
+  orderItems         OrderItem[]
+}
+
+model ProductVariant {
+  id                 String    @id @default(cuid())
+  productId          String
+  color              String
+  size               String
+  mrp                Float
+  sellingPrice       Float
+  discountPercentage Float
+  sku                String    @unique
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  product            Product   @relation(fields: [productId], references: [id])
+  media              Media[]   @relation("VariantMedia")
+}
+
+model Review {
+  id        String    @id @default(cuid())
+  productId String
+  userId    String
+  rating    Float
+  title     String
+  review    String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  product   Product   @relation(fields: [productId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model Cupon {
+  id                    String    @id @default(cuid())
+  code                  String    @unique
+  discountPercentage    Float
+  minimumShoppingAmount Float
+  validity              DateTime
+  deletedAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  user
+  admin
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  totalAmount     Float
+  discount        Float         @default(0)
+  payableAmount   Float
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   String        @default("COD")
+  shippingAddress String?
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}

@@ -51,7 +51,7 @@ const EditProduct = ({ id }) => {
     if (categoryData?.success) {
       const options = categoryData.data.map(cat => ({
         label: cat.name,
-        value: String(cat._id),
+        value: String(cat.id),
       }));
       setCategoryOptions(options);
     }
@@ -64,7 +64,7 @@ const EditProduct = ({ id }) => {
       setProduct({
         name: p.name || '',
         slug: p.slug || '',
-        category: String(p.category?._id) || '',
+        category: String(p.category?.id) || '',
         mrp: p.mrp || 0,
         sellingPrice: p.sellingPrice || 0,
         discountPercentage: p.discountPercentage || 0,
@@ -107,7 +107,7 @@ const EditProduct = ({ id }) => {
     e.preventDefault();
     try {
       setLoading(true);
-      const payload = { ...product, media: selectedMedia.map(m => m._id), _id: id };
+      const payload = { ...product, media: selectedMedia.map(m => m.id), id: id };
 
       const { data } = await axios.put('/api/product/update', payload);
       if (!data.success) throw new Error(data.message);
@@ -215,7 +215,7 @@ const EditProduct = ({ id }) => {
               {selectedMedia.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-2 mb-3">
                   {selectedMedia.map(media => (
-                    <div key={media._id} className="border p-1 rounded">
+                    <div key={media.id} className="border p-1 rounded">
                       <Image
                         src={media.secure_url || media.path}
                         alt={media.name || 'media'}
